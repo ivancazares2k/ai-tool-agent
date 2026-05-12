@@ -240,6 +240,12 @@ When the user asks about GitHub, use the GitHub tools.
 
 Always be direct and helpful. Use tools when they would help give a better answer."""
 
+    # Auto-search memory at the start of new conversations
+    if not history:
+        memory_context = await search_memory("user preferences information context")
+        if memory_context and memory_context != "No memories found.":
+            system += f"\n\n--- CONTEXT FROM MEMORY ---\n{memory_context}\n--- END CONTEXT ---"
+
     messages = history + [{"role": "user", "content": message}]
     tools_used = []
 
