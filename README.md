@@ -1,32 +1,47 @@
 # AI Tool Agent
 
-A personal AI assistant that can take real actions — searching the web, reading GitHub repositories, creating issues, and managing long-term memory.
+A personal AI assistant that thinks before it acts. It plans complex tasks, executes them step by step using real tools, and remembers everything across conversations.
 
 ## What Makes This Different
 
-Most AI chatbots only generate text. This agent uses Claude's tool calling API to actually *do things*. When you ask about AI salaries, it searches the web in real time. When you ask about your repos, it calls the GitHub API. When you share something important, it saves it to a vector memory database.
+Most AI assistants react to your message and respond. This agent:
+
+1. **Knows you before you speak** — automatically loads relevant memories at the start of every conversation
+2. **Plans before acting** — for complex tasks, generates a step-by-step execution plan before doing anything
+3. **Uses real tools** — searches the web, runs code, reads webpages, interacts with GitHub
+4. **Remembers everything** — saves important information to a vector database and retrieves it semantically
 
 ## Tools
 
-- **Web Search** — Brave Search API for real-time web results
-- **Memory** — Save and retrieve information using vector embeddings and semantic search
-- **GitHub** — List repositories and create issues
+- **Web search** — Brave Search API for real-time results
+- **Memory** — save and retrieve information using vector embeddings and semantic search
+- **GitHub** — list repositories, create issues
+- **URL fetcher** — read and extract text from any webpage
+- **Code executor** — write and run Python code, capture output
+- **Text analyzer** — analyze documents, job postings, articles against your background
 
-## How Tool Calling Works
+## How Planning Works
 
-You send a message → Claude decides which tool to use and with what arguments → your backend executes the tool → the result goes back to Claude → Claude responds with real data.
+When you send a complex multi-step request, the agent first generates a numbered plan showing exactly what it will do and which tools it will use. Then it executes each step, passing results forward. Simple questions skip planning entirely for speed.
 
-Claude makes all tool decisions autonomously based on context. You never specify which tool to use — it figures it out.
+Example:
+- Simple: "What are my GitHub repos?" → direct tool call, instant response
+- Complex: "Research the top AI companies, analyze my fit for each, save the best opportunity to memory" → 11-step plan generated, then executed autonomously
+
+## How Memory Works
+
+Every conversation starts with an automatic memory search. Before Claude reads your message, the agent searches your memory database for relevant context about you and injects it into the system prompt. Claude wakes up knowing who you are, what you've built, and what your goals are.
 
 ## Tech Stack
 
 **Backend**
 - FastAPI — async Python web framework
-- Anthropic Claude API — tool calling and reasoning
+- Anthropic Claude API — reasoning, planning, and tool use
 - Brave Search API — real-time web search
 - Supabase + pgvector — vector memory storage
 - Ollama + nomic-embed-text — local embeddings
-- PyGithub — GitHub API integration
+- PyGithub — GitHub API
+- httpx — URL fetching
 
 **Frontend**
 - React + Vite
@@ -41,7 +56,7 @@ Claude makes all tool decisions autonomously based on context. You never specify
 - Brave Search API key
 - GitHub personal access token
 - Supabase project with pgvector
-- Ollama running locally
+- Ollama running locally with nomic-embed-text
 
 ### Backend
 
@@ -57,7 +72,7 @@ Create `.env` in `backend/`:
 ANTHROPIC_API_KEY=your_key
 BRAVE_API_KEY=your_key
 GITHUB_TOKEN=your_token
-SUPABASE_URL=your_url
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_key
 OLLAMA_URL=http://localhost:11434
 ```
@@ -74,13 +89,27 @@ npm install
 npm run dev
 ```
 
+## Architecture
+User message
+↓
+Auto memory search (inject context)
+↓
+Complexity check
+↓
+[Complex] Generate plan → Execute steps → Synthesize
+[Simple]  Direct tool use → Respond
+↓
+Save important info to memory
+↓
+Response with tools used
 ## What I Learned
 
-- Anthropic's tool use API and how to define tool schemas
-- Agentic loops — how Claude decides when and which tools to call
-- Chaining multiple tool calls in a single conversation turn
-- Integrating multiple external APIs into one agent
-- The difference between text generation and action-taking AI systems
+- Anthropic tool use API and tool schema design
+- Agentic loops and multi-step execution
+- Two-phase planning architecture for complex tasks
+- Automatic context injection from vector memory
+- Integrating multiple external APIs into one autonomous system
+- Using Claude Code to build tools faster while maintaining understanding
 
 ## Author
 
