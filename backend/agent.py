@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from tools.search import web_search
 from tools.memory import save_memory, search_memory
 from tools.github_tool import create_github_issue, get_github_repos
+from tools.analyze_text import analyze_text
 
 load_dotenv()
 
@@ -80,6 +81,24 @@ TOOLS = [
             "properties": {},
             "required": []
         }
+    },
+    {
+        "name": "analyze_text",
+        "description": "Analyze text content based on a specified task (e.g., summarize, extract key points, sentiment analysis).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The text to analyze"
+                },
+                "task": {
+                    "type": "string",
+                    "description": "What to do with the text (defaults to 'summarize')"
+                }
+            },
+            "required": ["content"]
+        }
     }
 ]
 
@@ -98,6 +117,11 @@ async def execute_tool(tool_name: str, tool_input: dict) -> str:
         )
     elif tool_name == "get_github_repos":
         return await get_github_repos()
+    elif tool_name == "analyze_text":
+        return await analyze_text(
+            tool_input["content"],
+            tool_input.get("task", "summarize")
+        )
     else:
         return f"Unknown tool: {tool_name}"
 
