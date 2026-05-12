@@ -5,6 +5,7 @@ from tools.search import web_search
 from tools.memory import save_memory, search_memory
 from tools.github_tool import create_github_issue, get_github_repos
 from tools.analyze_text import analyze_text
+from tools.url_fetcher import fetch_url
 
 load_dotenv()
 
@@ -99,6 +100,20 @@ TOOLS = [
             },
             "required": ["content"]
         }
+    },
+    {
+        "name": "fetch_url",
+        "description": "Fetch and extract clean text content from a URL. Returns the first 3000 characters of text from the page.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to fetch content from"
+                }
+            },
+            "required": ["url"]
+        }
     }
 ]
 
@@ -122,6 +137,8 @@ async def execute_tool(tool_name: str, tool_input: dict) -> str:
             tool_input["content"],
             tool_input.get("task", "summarize")
         )
+    elif tool_name == "fetch_url":
+        return await fetch_url(tool_input["url"])
     else:
         return f"Unknown tool: {tool_name}"
 
