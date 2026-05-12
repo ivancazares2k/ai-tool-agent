@@ -6,6 +6,8 @@ from tools.memory import save_memory, search_memory
 from tools.github_tool import create_github_issue, get_github_repos
 from tools.analyze_text import analyze_text
 from tools.url_fetcher import fetch_url
+from tools.gmail import get_emails, draft_email, send_email
+from tools.code_executor import execute_code
 
 load_dotenv()
 
@@ -114,6 +116,73 @@ TOOLS = [
             },
             "required": ["url"]
         }
+    },
+    {
+        "name": "get_emails",
+        "description": "Fetch the last 10 unread emails from Gmail inbox. Returns sender, subject, and snippet for each email.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "draft_email",
+        "description": "Create a draft email in Gmail.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {
+                    "type": "string",
+                    "description": "Recipient email address"
+                },
+                "subject": {
+                    "type": "string",
+                    "description": "Email subject"
+                },
+                "body": {
+                    "type": "string",
+                    "description": "Email body content"
+                }
+            },
+            "required": ["to", "subject", "body"]
+        }
+    },
+    {
+        "name": "send_email",
+        "description": "Send an email via Gmail.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {
+                    "type": "string",
+                    "description": "Recipient email address"
+                },
+                "subject": {
+                    "type": "string",
+                    "description": "Email subject"
+                },
+                "body": {
+                    "type": "string",
+                    "description": "Email body content"
+                }
+            },
+            "required": ["to", "subject", "body"]
+        }
+    },
+    {
+        "name": "execute_code",
+        "description": "Execute Python code safely with a 10 second timeout. Returns stdout and stderr output.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "python_code": {
+                    "type": "string",
+                    "description": "The Python code to execute"
+                }
+            },
+            "required": ["python_code"]
+        }
     }
 ]
 
@@ -139,6 +208,22 @@ async def execute_tool(tool_name: str, tool_input: dict) -> str:
         )
     elif tool_name == "fetch_url":
         return await fetch_url(tool_input["url"])
+    elif tool_name == "get_emails":
+        return await get_emails()
+    elif tool_name == "draft_email":
+        return await draft_email(
+            tool_input["to"],
+            tool_input["subject"],
+            tool_input["body"]
+        )
+    elif tool_name == "send_email":
+        return await send_email(
+            tool_input["to"],
+            tool_input["subject"],
+            tool_input["body"]
+        )
+    elif tool_name == "execute_code":
+        return await execute_code(tool_input["python_code"])
     else:
         return f"Unknown tool: {tool_name}"
 
