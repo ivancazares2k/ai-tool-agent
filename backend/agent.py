@@ -227,6 +227,73 @@ async def execute_tool(tool_name: str, tool_input: dict) -> str:
     else:
         return f"Unknown tool: {tool_name}"
 
+def should_plan(message: str) -> bool:
+    """
+    Determine if a message is complex enough to require planning.
+    
+    Args:
+        message: The user's message
+    
+    Returns:
+        True if the message requires planning, False otherwise
+    """
+    # Check for complexity indicators
+    complexity_phrases = [
+        "and then", "research and", "analyze and", "compare",
+        "create a report", "find and", "step by step",
+        "first", "second", "multiple", "several"
+    ]
+    
+    message_lower = message.lower()
+    
+    # Check if message contains complexity phrases
+    for phrase in complexity_phrases:
+        if phrase in message_lower:
+            return True
+    
+    # Check if message is longer than 150 characters
+    if len(message) > 150:
+        return True
+    
+    return False
+
+
+async def create_plan(message: str, client, system: str) -> str:
+    """
+    Create a step-by-step plan for executing a complex task.
+    
+    Args:
+        message: The user's message
+        client: The Anthropic client
+        system: The system prompt
+    
+    Returns:
+        A numbered plan as a string
+    """
+    planning_prompt = f"""Given this user request, create a clear step-by-step plan to accomplish it. 
+Break it down into numbered steps that can be executed sequentially.
+Be specific about what tools or actions will be needed for each step.
+
+User request: {message}
+
+Respond with ONLY the numbered plan, nothing else."""
+
+    response = client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=1000,
+        system=system,
+        messages=[{"role": "user", "content": planning_prompt}]
+    )
+    
+    plan = ""
+    for block in response.content:
+        if hasattr(block, "text"):
+            plan = block.text
+            break
+    
+    return plan
+
+
 async def run_agent(message: str, history: list) -> dict:
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -246,8 +313,18 @@ Always be direct and helpful. Use tools when they would help give a better answe
         if memory_context and memory_context != "No memories found.":
             system += f"\n\n--- CONTEXT FROM MEMORY ---\n{memory_context}\n--- END CONTEXT ---"
 
+    # Check if we need to create a plan for complex tasks
+    plan = None
+    if should_plan(message):
+        plan = await create_plan(message, client, system)
+        if plan:
+            system += f"\n\n--- EXECUTION PLAN ---\n{plan}\n--- END PLAN ---\n\nFollow this plan to accomplish the user's request."
+
     messages = history + [{"role": "user", "content": message}]
     tools_used = []
+    
+    # If we created a plan, prepend it to the response
+    plan_prefix = f"**Plan:**\n{plan}\n\n**Execution:**\n" if plan else ""
 
     while True:
         response = client.messages.create(
@@ -263,6 +340,11 @@ Always be direct and helpful. Use tools when they would help give a better answe
             for block in response.content:
                 if hasattr(block, "text"):
                     final_text = block.text
+            
+            # Prepend the plan to the final response if one was created
+            if plan_prefix:
+                final_text = plan_prefix + final_text
+            
             return {
                 "response": final_text,
                 "tools_used": tools_used
