@@ -104,7 +104,7 @@ async def compress_memories() -> str:
                 # Calculate cosine similarity
                 similarity = cosine_similarity(mem1["embedding"], mem2["embedding"])
                 
-                if similarity > 0.85:
+                if similarity > 0.95:
                     cluster.append(mem2)
                     used_indices.add(j)
             

@@ -28,7 +28,8 @@ function App() {
       setMessages(prev => [...prev, {
         role: "assistant",
         content: data.response,
-        tools: data.tools_used || []
+        tools: data.tools_used || [],
+        evaluationScore: data.evaluation_score
       }])
     } catch {
       setMessages(prev => [...prev, {
@@ -84,6 +85,18 @@ function App() {
                     {msg.tools.map((t, j) => (
                       <span key={j} className="tool-tag">⚡ {t}</span>
                     ))}
+                    {msg.evaluationScore != null && (
+                      <span className="tool-tag evaluation-score">
+                        ✨ Quality: {msg.evaluationScore}/10
+                      </span>
+                    )}
+                  </div>
+                )}
+                {msg.tools && msg.tools.length === 0 && msg.evaluationScore != null && (
+                  <div className="tools-used">
+                    <span className="tool-tag evaluation-score">
+                      ✨ Quality: {msg.evaluationScore}/10
+                    </span>
                   </div>
                 )}
               </div>

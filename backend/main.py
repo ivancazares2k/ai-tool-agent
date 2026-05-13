@@ -39,7 +39,8 @@ async def chat(request: ChatRequest):
 
     return {
         "response": result["response"],
-        "tools_used": result["tools_used"]
+        "tools_used": result["tools_used"],
+        "evaluation_score": result.get("evaluation_score")
     }
 
 @app.delete("/history")

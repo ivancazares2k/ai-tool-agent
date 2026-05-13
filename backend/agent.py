@@ -322,6 +322,65 @@ Respond with ONLY the numbered plan, nothing else."""
     return plan
 
 
+async def evaluate_response(client, user_message: str, response_text: str, tools_used: list) -> dict:
+    """
+    Evaluate the quality of a response using Claude.
+    
+    Args:
+        client: The Anthropic client
+        user_message: The original user message
+        response_text: The generated response
+        tools_used: List of tools that were used
+    
+    Returns:
+        Dictionary with scores and average
+    """
+    eval_prompt = f"""Evaluate this AI assistant response on three criteria (score 1-10 for each):
+
+User Question: {user_message}
+
+Tools Used: {', '.join(tools_used) if tools_used else 'None'}
+
+Response: {response_text}
+
+Provide scores for:
+1. tool_usage: Did it use the right tools appropriately? (1-10)
+2. completeness: Did it fully answer the question? (1-10)
+3. helpfulness: Was the response genuinely useful? (1-10)
+
+Respond ONLY with three numbers separated by commas, like: 8,9,7"""
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=100,
+            messages=[{"role": "user", "content": eval_prompt}]
+        )
+        
+        eval_text = ""
+        for block in response.content:
+            if hasattr(block, "text"):
+                eval_text = block.text.strip()
+                break
+        
+        # Parse the scores
+        scores = [int(s.strip()) for s in eval_text.split(',')]
+        if len(scores) == 3:
+            tool_usage, completeness, helpfulness = scores
+            average = (tool_usage + completeness + helpfulness) / 3
+            
+            return {
+                "tool_usage": tool_usage,
+                "completeness": completeness,
+                "helpfulness": helpfulness,
+                "average": round(average, 2)
+            }
+    except Exception as e:
+        print(f"Evaluation error: {e}")
+    
+    return {"tool_usage": 0, "completeness": 0, "helpfulness": 0, "average": 0}
+
+
 async def run_agent(message: str, history: list) -> dict:
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -397,9 +456,20 @@ Always be direct, helpful, and proactive with tool usage. Use tools to give bett
             if plan_prefix:
                 final_text = plan_prefix + final_text
             
+            # Self-evaluate the response if it's substantial
+            evaluation_score = None
+            if len(final_text) > 100:
+                evaluation = await evaluate_response(client, message, final_text, tools_used)
+                evaluation_score = evaluation["average"]
+                
+                # Save evaluation to memory with SELF-EVAL prefix
+                eval_summary = f"SELF-EVAL: Q: {message[:100]}... | Scores - Tool:{evaluation['tool_usage']}, Complete:{evaluation['completeness']}, Helpful:{evaluation['helpfulness']} | Avg:{evaluation_score}"
+                await save_memory(eval_summary)
+            
             return {
                 "response": final_text,
-                "tools_used": tools_used
+                "tools_used": tools_used,
+                "evaluation_score": evaluation_score
             }
 
         if response.stop_reason == "tool_use":
