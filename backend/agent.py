@@ -2,7 +2,7 @@ import os
 import anthropic
 from dotenv import load_dotenv
 from tools.search import web_search
-from tools.memory import save_memory, search_memory
+from tools.memory import save_memory, search_memory, compress_memories
 from tools.github_tool import create_github_issue, get_github_repos
 from tools.analyze_text import analyze_text
 from tools.url_fetcher import fetch_url
@@ -198,6 +198,15 @@ TOOLS = [
             },
             "required": ["query"]
         }
+    },
+    {
+        "name": "compress_memory",
+        "description": "Compress similar memories by clustering and merging them using AI. Returns a report of compression results.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     }
 ]
 
@@ -241,6 +250,8 @@ async def execute_tool(tool_name: str, tool_input: dict) -> str:
         return await execute_code(tool_input["python_code"])
     elif tool_name == "search_wikipedia":
         return await search_wikipedia(tool_input["query"])
+    elif tool_name == "compress_memory":
+        return await compress_memories()
     else:
         return f"Unknown tool: {tool_name}"
 
