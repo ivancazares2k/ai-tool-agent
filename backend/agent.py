@@ -8,6 +8,7 @@ from tools.analyze_text import analyze_text
 from tools.url_fetcher import fetch_url
 from tools.gmail import get_emails, draft_email, send_email
 from tools.code_executor import execute_code
+from tools.wikipedia import search_wikipedia
 
 load_dotenv()
 
@@ -183,6 +184,20 @@ TOOLS = [
             },
             "required": ["python_code"]
         }
+    },
+    {
+        "name": "search_wikipedia",
+        "description": "Search Wikipedia and return a summary of the top result with title, extract, and URL.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query for Wikipedia"
+                }
+            },
+            "required": ["query"]
+        }
     }
 ]
 
@@ -224,6 +239,8 @@ async def execute_tool(tool_name: str, tool_input: dict) -> str:
         )
     elif tool_name == "execute_code":
         return await execute_code(tool_input["python_code"])
+    elif tool_name == "search_wikipedia":
+        return await search_wikipedia(tool_input["query"])
     else:
         return f"Unknown tool: {tool_name}"
 
@@ -298,14 +315,38 @@ async def run_agent(message: str, history: list) -> dict:
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     system = """You are a powerful personal AI assistant with access to tools.
-You can search the web, manage memories, and interact with GitHub.
 
-When you need current information, search the web.
-When you learn something important about the user, save it to memory.
-When the user asks about their past or preferences, search memory first.
-When the user asks about GitHub, use the GitHub tools.
+TOOL USAGE GUIDELINES:
 
-Always be direct and helpful. Use tools when they would help give a better answer."""
+Memory Management:
+- ALWAYS search memory FIRST before answering any personal questions about the user
+- Automatically save important new information about the user to memory without being asked
+- Save preferences, facts, goals, and context that would be useful in future conversations
+
+Information Retrieval:
+- ALWAYS use web_search for questions about current events, news, or recent information
+- Use search_wikipedia for factual definitions, explanations of concepts, or encyclopedic information
+- Use fetch_url to retrieve content from URLs the user shares
+
+Tool Chaining:
+- When the user shares a link and wants analysis: fetch_url → analyze_text
+- When you need to analyze web content: web_search → fetch_url → analyze_text
+- For numerical calculations or data analysis: ALWAYS use execute_code automatically
+
+GitHub Operations:
+- Use get_github_repos to list repositories
+- Use create_github_issue to create issues
+
+Email Operations:
+- Use get_emails to check inbox
+- Use draft_email to create drafts
+- Use send_email to send messages
+
+Planning:
+- When creating execution plans, ALWAYS specify which tool will be used for each step
+- Be explicit about tool chaining (e.g., "Step 1: Use web_search to find..., Step 2: Use fetch_url to retrieve...")
+
+Always be direct, helpful, and proactive with tool usage. Use tools to give better, more accurate answers."""
 
     # Auto-search memory at the start of new conversations
     if not history:
